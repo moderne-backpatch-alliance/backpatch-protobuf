@@ -211,6 +211,7 @@
                     <exclude>GeneratedMessageTest.java</exclude>
                     <exclude>LazyFieldTest.java</exclude>
                     <exclude>LazyStringEndToEndTest.java</exclude>
+                    <exclude>LiteRecursionLimitTest.java</exclude>
                     <exclude>MapForProto2Test.java</exclude>
                     <exclude>MapTest.java</exclude>
                     <exclude>MessageTest.java</exclude>
