@@ -58,4 +58,10 @@
         <arg value="${test.proto.dir}/com/google/protobuf/nested_extension_lite.proto"/>
         <arg value="${test.proto.dir}/com/google/protobuf/non_nested_extension_lite.proto"/>
     </exec>
+    <exec executable="${protoc}">
+        <arg value="--java_out=lite:${generated.testsources.dir}"/>
+        <arg value="--proto_path=${test.proto.dir}"/>
+        <arg value="${test.proto.dir}/com/google/protobuf/recursion_limit_lite_test.proto"/>
+        <arg value="${test.proto.dir}/com/google/protobuf/recursion_limit_lite_proto3_test.proto"/>
+    </exec>
 </project>
