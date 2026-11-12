@@ -313,6 +313,70 @@ public class LiteRecursionLimitTest {
     assertMessageSetParse(100, true);
   }
 
+  private static CodedInputStream balancedGroups(int groups) throws IOException {
+    int start = WireFormat.makeTag(3, WireFormat.WIRETYPE_START_GROUP);
+    int end = WireFormat.makeTag(3, WireFormat.WIRETYPE_END_GROUP);
+    ByteString.Output bytes = ByteString.newOutput();
+    CodedOutputStream output = CodedOutputStream.newInstance(bytes);
+    for (int i = 0; i < groups; i++) {
+      output.writeInt32NoTag(start);
+    }
+    for (int i = 0; i < groups; i++) {
+      output.writeInt32NoTag(end);
+    }
+    output.flush();
+    return bytes.toByteString().newCodedInput();
+  }
+
+  private static boolean mergeFirstField(CodedInputStream input) throws IOException {
+    return UnknownFieldSetLite.newInstance().mergeFieldFrom(input.readTag(), input);
+  }
+
+  @Test
+  public void testUnknownFieldSetLite_mergeFieldFrom_withinLimit() throws Exception {
+    CodedInputStream input = balancedGroups(100);
+
+    assertThat(mergeFirstField(input)).isTrue();
+    assertThat(input.recursionDepth).isEqualTo(0);
+  }
+
+  private static ByteString toByteString(UnknownFieldSetLite unknownFields) throws IOException {
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    CodedOutputStream output = CodedOutputStream.newInstance(bytes);
+    unknownFields.writeTo(output);
+    output.flush();
+    return ByteString.copyFrom(bytes.toByteArray());
+  }
+
+  @Test
+  public void testRecursionLimitExceeded() throws Exception {
+    UnknownFieldSetLite current = UnknownFieldSetLite.newInstance();
+    current.storeField(WireFormat.makeTag(1, WireFormat.WIRETYPE_VARINT), 1L);
+
+    for (int i = 0; i < 150; i++) {
+      UnknownFieldSetLite parent = UnknownFieldSetLite.newInstance();
+      parent.storeField(WireFormat.makeTag(1, WireFormat.WIRETYPE_START_GROUP), current);
+      current = parent;
+    }
+
+    ByteString data = toByteString(current);
+    final CodedInputStream input = CodedInputStream.newInstance(data.toByteArray());
+
+    final UnknownFieldSetLite instance = UnknownFieldSetLite.newInstance();
+
+    final int tag = input.readTag();
+    InvalidProtocolBufferException e =
+        assertThrows(
+            InvalidProtocolBufferException.class,
+            new ThrowingRunnable() {
+              @Override
+              public void run() throws Throwable {
+                instance.mergeFieldFrom(tag, input);
+              }
+            });
+    assertThat(e).hasMessageThat().contains("too many levels of nesting");
+  }
+
   private static ByteString generateNestingGroups(int num) throws IOException {
     int groupTap = WireFormat.makeTag(3, WireFormat.WIRETYPE_START_GROUP);
     ByteString.Output byteStringOutput = ByteString.newOutput();
