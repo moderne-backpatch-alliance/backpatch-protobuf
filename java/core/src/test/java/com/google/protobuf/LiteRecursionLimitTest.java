@@ -34,6 +34,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -44,6 +45,7 @@ import org.junit.runners.JUnit4;
 import recursion_limit_lite_test.RecursionLimitLiteProto.RecursiveGroup;
 import recursion_limit_lite_test.RecursionLimitLiteProto.RecursiveMessage;
 import recursion_limit_lite_test.RecursionLimitLiteProto.TestAllTypesLite;
+import recursion_limit_lite_test.RecursionLimitLiteProto.TestMessageSetLite;
 import recursion_limit_lite_test.RecursionLimitLiteProto3.MapContainer;
 
 @RunWith(JUnit4.class)
@@ -247,6 +249,68 @@ public class LiteRecursionLimitTest {
 
     assertThat(parseFromThrown).hasMessageThat().contains(NESTING);
     assertThat(mergeFromThrown).hasMessageThat().contains(NESTING);
+  }
+
+  private static byte[] mapEntryWithSkippedGroups(int groups) throws IOException {
+    byte[] nested = generateNestingGroups(groups).toByteArray();
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    CodedOutputStream output = CodedOutputStream.newInstance(bytes);
+    output.writeByteArray(3, nested);
+    output.flush();
+    return bytes.toByteArray();
+  }
+
+  private static byte[] messageSetItemWithSkippedGroups(int groups) throws IOException {
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    bytes.write(WireFormat.MESSAGE_SET_ITEM_TAG);
+    generateNestingGroups(groups).writeTo(bytes);
+    return bytes.toByteArray();
+  }
+
+  private static void assertMapEntryParse(int groups, boolean refused) throws IOException {
+    final byte[] data = mapEntryWithSkippedGroups(groups);
+    Throwable thrown =
+        parseThrows(
+            new ThrowingRunnable() {
+              @Override
+              public void run() throws Throwable {
+                MapContainer.parseFrom(data);
+              }
+            });
+    assertRefused(thrown, refused);
+  }
+
+  private static void assertMessageSetParse(int groups, boolean refused) throws IOException {
+    final byte[] data = messageSetItemWithSkippedGroups(groups);
+    Throwable thrown =
+        parseThrows(
+            new ThrowingRunnable() {
+              @Override
+              public void run() throws Throwable {
+                TestMessageSetLite.parseFrom(data);
+              }
+            });
+    assertRefused(thrown, refused);
+  }
+
+  private static void assertRefused(Throwable thrown, boolean refused) {
+    if (refused) {
+      assertThat(thrown).hasMessageThat().contains(NESTING);
+    } else {
+      assertThat(thrown).hasMessageThat().doesNotContain(NESTING);
+    }
+  }
+
+  @Test
+  public void testParseFromBytes_skipFieldInMapEntry_recursionLimit() throws Exception {
+    assertMapEntryParse(99, false);
+    assertMapEntryParse(100, true);
+  }
+
+  @Test
+  public void testParseFromBytes_skipFieldInMessageSetItem_recursionLimit() throws Exception {
+    assertMessageSetParse(99, false);
+    assertMessageSetParse(100, true);
   }
 
   private static ByteString generateNestingGroups(int num) throws IOException {

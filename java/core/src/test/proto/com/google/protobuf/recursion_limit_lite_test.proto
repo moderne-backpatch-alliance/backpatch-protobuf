@@ -52,3 +52,8 @@ message RecursiveGroup {
     optional RecursiveGroup next = 2;
   }
 }
+
+message TestMessageSetLite {
+  option message_set_wire_format = true;
+  extensions 4 to max;
+}
