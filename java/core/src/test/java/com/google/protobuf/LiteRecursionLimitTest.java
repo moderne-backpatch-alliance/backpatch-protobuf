@@ -377,6 +377,23 @@ public class LiteRecursionLimitTest {
     assertThat(e).hasMessageThat().contains("too many levels of nesting");
   }
 
+  @Test
+  public void testParseFromInputStream_recursiveKnownGroups() throws Exception {
+    byte[] data100 = makeRecursiveGroup(100).toByteArray();
+    final byte[] data101 = makeRecursiveGroup(101).toByteArray();
+
+    RecursiveGroup.parseFrom(new ByteArrayInputStream(data100));
+    Throwable thrown =
+        parseThrows(
+            new ThrowingRunnable() {
+              @Override
+              public void run() throws Throwable {
+                RecursiveGroup.parseFrom(new ByteArrayInputStream(data101));
+              }
+            });
+    assertThat(thrown).hasMessageThat().contains(NESTING);
+  }
+
   private static ByteString generateNestingGroups(int num) throws IOException {
     int groupTap = WireFormat.makeTag(3, WireFormat.WIRETYPE_START_GROUP);
     ByteString.Output byteStringOutput = ByteString.newOutput();
