@@ -1,0 +1,22 @@
+schema: osera-patch-evidence/0.1.0
+producer: moderne
+release: 3.19.6.1-backpatch-00001
+baseline: v3.19.6+backpatch.baseline
+fixes:
+  - cve: CVE-2024-7254
+    upstream_fix_url: https://github.com/advisories/GHSA-735f-pc8j-v9w8
+    advisory_url: https://nvd.nist.gov/vuln/detail/CVE-2024-7254
+    patch_commit_url: https://github.com/moderne-backpatch-alliance/backpatch-protobuf/compare/16b43f9~1...759e959
+    basis: adapted
+    artifacts:
+      - com.google.protobuf:protobuf-java
+      - com.google.protobuf:protobuf-javalite
+    note: New in this release; ported onto 3.19.6; fixed at 3.19.6.1-backpatch-00001 (backpatch-protobuf@16b43f9..759e959).
+tests:
+  commit: 759e959f2aa97a05885492354ece140d11b70089
+  command: mvn -B -T1 -pl core -am -pl lite -Dmaven.test.failure.ignore=true clean test
+  runtime: openjdk version 1.8.0_382, Apache Maven 3.9.16
+  report: protobuf-java-3.19.6.1-backpatch-00001-tests.zip
+  report_sha256: 29a36780d4a4becea36485810c35c71a31167bedc7b9bfa3215f4e19cbd15216
+  result: pass
+  note: 1913 tests at the patch commit, 5 of them skipped by the suite, 0 failed, 0 errors.
